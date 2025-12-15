@@ -3,11 +3,11 @@ import { Octokit } from '@octokit/rest'
 
 export async function POST(request: NextRequest) {
   try {
-    const { url, title } = await request.json()
+    const { links } = await request.json()
     
-    if (!url && !title) {
+    if (!links || !Array.isArray(links) || links.length === 0) {
       return NextResponse.json(
-        { error: 'URL or title is required' },
+        { error: 'Links array is required and must not be empty' },
         { status: 400 }
       )
     }
@@ -60,7 +60,6 @@ export async function POST(request: NextRequest) {
       if ('content' in fileData) {
         sha = fileData.sha
         const githubContent = Buffer.from(fileData.content, 'base64').toString('utf-8')
-        // GitHub is source of truth - always use GitHub content
         currentContent = githubContent
       }
     } catch (error: any) {
@@ -74,15 +73,15 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Parse and remove the link
+    // Parse and remove all links
     const lines = currentContent.split('\n')
     const newLines: string[] = []
     let skipNext = false
-    let foundLink = false
-    let deletedLinkCategory: string | null = null
+    const foundLinks: string[] = []
+    const deletedCategories = new Set<string>()
     let currentCategory: string | null = null
 
-    // First pass: find and remove the link, track its category
+    // First pass: find and remove all links, track their categories
     for (let i = 0; i < lines.length; i++) {
       const line = lines[i]
       
@@ -91,17 +90,23 @@ export async function POST(request: NextRequest) {
         currentCategory = line.replace(/^##\s+/, '').trim()
       }
       
-      // Check if this line contains the link we want to delete
+      // Check if this line contains a link we want to delete
       if (line.includes('[') && line.includes('](')) {
         const linkMatch = line.match(/\[([^\]]+)\]\(([^)]+)\)/)
         if (linkMatch) {
           const linkTitle = linkMatch[1]
           const linkUrl = linkMatch[2]
           
-          // Match by URL or title
-          if ((url && linkUrl === url) || (title && linkTitle === title)) {
-            foundLink = true
-            deletedLinkCategory = currentCategory
+          // Check if this link matches any in our delete list
+          const shouldDelete = links.some((link: { url?: string; title?: string }) => 
+            (link.url && linkUrl === link.url) || (link.title && linkTitle === link.title)
+          )
+          
+          if (shouldDelete) {
+            foundLinks.push(linkTitle || linkUrl)
+            if (currentCategory) {
+              deletedCategories.add(currentCategory)
+            }
             skipNext = true
             // Skip this line and the next line (description)
             continue
@@ -125,9 +130,9 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    if (!foundLink) {
+    if (foundLinks.length === 0) {
       return NextResponse.json(
-        { error: 'Link not found in the file' },
+        { error: 'No matching links found in the file' },
         { status: 404 }
       )
     }
@@ -148,11 +153,12 @@ export async function POST(request: NextRequest) {
 
     // Second pass: Remove empty categories
     let finalContent = cleanedLines.join('\n')
-    let categoryRemoved = false
+    const removedCategories: string[] = []
     
-    if (deletedLinkCategory) {
+    if (deletedCategories.size > 0) {
       const finalLines: string[] = []
-      let inTargetCategory = false
+      const categoriesToCheck = new Set(deletedCategories)
+      let currentCategory: string | null = null
       let categoryStartIndex = -1
       let hasLinksInCategory = false
       let pendingLines: string[] = [] // Store lines until we know if category has links
@@ -164,36 +170,30 @@ export async function POST(request: NextRequest) {
         if (line.startsWith('## ')) {
           const categoryName = line.replace(/^##\s+/, '').trim()
           
-          // If we were in the target category and it had no links, skip adding it
-          if (inTargetCategory && !hasLinksInCategory) {
+          // If we were tracking a category and it had no links, skip adding it
+          if (currentCategory && categoriesToCheck.has(currentCategory) && !hasLinksInCategory) {
             // Remove trailing blank lines before the category
             while (finalLines.length > 0 && finalLines[finalLines.length - 1].trim() === '') {
               finalLines.pop()
             }
-            categoryRemoved = true
-            // Clear pending lines - they were part of the empty category
+            removedCategories.push(currentCategory)
             pendingLines = []
-          } else if (inTargetCategory && hasLinksInCategory) {
-            // Add any pending lines from category that has links
+          } else if (currentCategory && categoriesToCheck.has(currentCategory) && hasLinksInCategory) {
+            // Add pending lines from category that has links
             finalLines.push(...pendingLines)
             pendingLines = []
           }
           
-          // Check if this is the category we're looking for
-          if (categoryName === deletedLinkCategory) {
-            inTargetCategory = true
-            categoryStartIndex = i
-            hasLinksInCategory = false
-            pendingLines = []
-            // Don't add the category heading yet - wait to see if it has links
-            continue
-          } else {
-            // Different category - add it normally
-            inTargetCategory = false
-            finalLines.push(line)
-          }
-        } else if (inTargetCategory) {
-          // We're in the target category - check for links
+          // Start tracking new category
+          currentCategory = categoryName
+          categoryStartIndex = i
+          hasLinksInCategory = false
+          pendingLines = []
+          
+          // Don't add the category heading yet - wait to see if it has links
+          continue
+        } else if (currentCategory && categoriesToCheck.has(currentCategory)) {
+          // We're in a category we're checking - look for links
           if (line.includes('[') && line.includes('](')) {
             hasLinksInCategory = true
             // Add the category heading now that we know it has links
@@ -216,19 +216,24 @@ export async function POST(request: NextRequest) {
             }
           }
         } else {
-          // Not in target category - add line normally
+          // Not in a category we're checking - add line normally
+          if (categoryStartIndex !== -1 && currentCategory) {
+            // Add the category heading if we haven't yet
+            finalLines.push(cleanedLines[categoryStartIndex])
+            categoryStartIndex = -1
+          }
           finalLines.push(line)
         }
       }
       
-      // Handle case where target category is the last one
-      if (inTargetCategory && !hasLinksInCategory) {
+      // Handle case where the last category is empty
+      if (currentCategory && categoriesToCheck.has(currentCategory) && !hasLinksInCategory) {
         // Remove trailing blank lines
         while (finalLines.length > 0 && finalLines[finalLines.length - 1].trim() === '') {
           finalLines.pop()
         }
-        categoryRemoved = true
-      } else if (inTargetCategory && hasLinksInCategory) {
+        removedCategories.push(currentCategory)
+      } else if (currentCategory && categoriesToCheck.has(currentCategory) && hasLinksInCategory) {
         // Add remaining pending lines
         finalLines.push(...pendingLines)
       }
@@ -261,9 +266,9 @@ export async function POST(request: NextRequest) {
     }
 
     // Create commit
-    const commitMessage = categoryRemoved 
-      ? `Delete link: ${title || url} (removed empty category)`
-      : `Delete link: ${title || url}`
+    const commitMessage = removedCategories.length > 0
+      ? `Delete ${foundLinks.length} link(s) (removed ${removedCategories.length} empty categor${removedCategories.length === 1 ? 'y' : 'ies'})`
+      : `Delete ${foundLinks.length} link(s)`
     
     await octokit.repos.createOrUpdateFileContents({
       owner: repoOwner,
@@ -275,19 +280,17 @@ export async function POST(request: NextRequest) {
       branch: defaultBranch,
     })
 
-    // Note: Local file sync removed for Vercel compatibility (serverless functions don't have filesystem access)
-    // GitHub is the source of truth, local file sync only works in development
-
     return NextResponse.json({
       success: true,
-      message: 'Link deleted successfully',
-      categoryRemoved: categoryRemoved,
+      message: `Successfully deleted ${foundLinks.length} link(s)`,
+      deletedCount: foundLinks.length,
+      removedCategories: removedCategories,
     })
   } catch (error: any) {
     console.error('GitHub API error:', error)
     return NextResponse.json(
-      { error: error.message || 'Failed to delete link from GitHub' },
-      { status: 500 }
+      { error: error.message || 'Failed to delete links from GitHub' },
+      { status: error.status || 500 }
     )
   }
 }

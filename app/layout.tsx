@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
 import './globals.css'
 import { ThemeProvider } from './theme-provider'
+import { DeleteModeProvider } from './delete-mode-context'
 
 export const metadata: Metadata = {
   title: 'Useful Links',
@@ -20,7 +21,11 @@ export default function RootLayout({
         <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
       </head>
       <body>
-        <ThemeProvider>{children}</ThemeProvider>
+        <ThemeProvider>
+          <DeleteModeProvider>
+            {children}
+          </DeleteModeProvider>
+        </ThemeProvider>
       </body>
     </html>
   )

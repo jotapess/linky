@@ -88,6 +88,17 @@ export function AddLinkModal({ open, onClose, categories }: AddLinkModalProps) {
         return
       }
       
+      // Store new link info in sessionStorage for indicator
+      try {
+        const newLinkId = `${url}|${metadata.title}`
+        const existingLinks = JSON.parse(sessionStorage.getItem('linky:newLinks') || '[]')
+        existingLinks.push(newLinkId)
+        sessionStorage.setItem('linky:newLinks', JSON.stringify(existingLinks))
+        sessionStorage.setItem('linky:showNotification', 'true')
+      } catch (e) {
+        // Ignore sessionStorage errors
+      }
+      
       setSuccess(true)
       setTimeout(() => {
         setSuccess(false)

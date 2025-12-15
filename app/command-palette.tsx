@@ -2,9 +2,9 @@
 
 import { Command } from 'cmdk'
 import { useTheme } from './theme-provider'
+import { useDeleteMode } from './delete-mode-context'
 import { useEffect, useState } from 'react'
 import { AddLinkModal } from './add-link-modal'
-import { DeleteLinkModal } from './delete-link-modal'
 
 interface Link {
   text: string
@@ -25,9 +25,8 @@ interface CommandPaletteProps {
 export function CommandPalette({ links, categories }: CommandPaletteProps) {
   const [open, setOpen] = useState(false)
   const [showAddLink, setShowAddLink] = useState(false)
-  const [showDeleteLink, setShowDeleteLink] = useState(false)
-  const [linkToDelete, setLinkToDelete] = useState<Link | null>(null)
   const { theme, setTheme } = useTheme()
+  const { enterDeleteMode, isDeleteMode } = useDeleteMode()
 
   useEffect(() => {
     const down = (e: KeyboardEvent) => {
@@ -74,44 +73,27 @@ export function CommandPalette({ links, categories }: CommandPaletteProps) {
             </Command.Group>
           )}
           {links.length > 0 && (
-            <>
-              <Command.Group heading="Links">
-                {links.map((link, index) => (
-                  <Command.Item
-                    key={`link-${index}`}
-                    onSelect={() => {
-                      window.open(link.url, '_blank')
-                      setOpen(false)
-                    }}
-                  >
-                    <span>{link.text}</span>
-                    {link.category && (
-                      <span className="command-item-category">{link.category}</span>
-                    )}
-                  </Command.Item>
-                ))}
-              </Command.Group>
-              <Command.Group heading="Delete Links">
-                {links.map((link, index) => (
-                  <Command.Item
-                    key={`delete-link-${index}`}
-                    onSelect={() => {
-                      setLinkToDelete(link)
-                      setOpen(false)
-                      setShowDeleteLink(true)
-                    }}
-                  >
-                    <span>Delete: {link.text}</span>
-                    {link.category && (
-                      <span className="command-item-category">{link.category}</span>
-                    )}
-                  </Command.Item>
-                ))}
-              </Command.Group>
-            </>
+            <Command.Group heading="Links">
+              {links.map((link, index) => (
+                <Command.Item
+                  key={`link-${index}`}
+                  onSelect={() => {
+                    window.open(link.url, '_blank')
+                    setOpen(false)
+                  }}
+                >
+                  <span>{link.text}</span>
+                  {link.category && (
+                    <span className="command-item-category">{link.category}</span>
+                  )}
+                </Command.Item>
+              ))}
+            </Command.Group>
           )}
           <Command.Group heading="Actions">
             <Command.Item
+              value="add new link"
+              keywords={['add', 'new', 'link', 'create']}
               onSelect={() => {
                 setOpen(false)
                 setShowAddLink(true)
@@ -119,6 +101,18 @@ export function CommandPalette({ links, categories }: CommandPaletteProps) {
             >
               Add New Link
             </Command.Item>
+            {links.length > 0 && !isDeleteMode && (
+              <Command.Item
+                value="delete links"
+                keywords={['delete', 'remove', 'links']}
+                onSelect={() => {
+                  setOpen(false)
+                  enterDeleteMode()
+                }}
+              >
+                Delete Links
+              </Command.Item>
+            )}
           </Command.Group>
           <Command.Group heading="Theme">
             <Command.Item
@@ -127,7 +121,7 @@ export function CommandPalette({ links, categories }: CommandPaletteProps) {
                 setOpen(false)
               }}
             >
-              Switch to Light Mode
+              ☀️ Switch to Light Mode
             </Command.Item>
             <Command.Item
               onSelect={() => {
@@ -135,7 +129,7 @@ export function CommandPalette({ links, categories }: CommandPaletteProps) {
                 setOpen(false)
               }}
             >
-              Switch to Dark Mode
+              🌙 Switch to Dark Mode
             </Command.Item>
             <Command.Item
               onSelect={() => {
@@ -143,7 +137,7 @@ export function CommandPalette({ links, categories }: CommandPaletteProps) {
                 setOpen(false)
               }}
             >
-              Use System Preference
+              💻 Use System Preference
             </Command.Item>
           </Command.Group>
         </Command.List>
@@ -152,14 +146,6 @@ export function CommandPalette({ links, categories }: CommandPaletteProps) {
         open={showAddLink}
         onClose={() => setShowAddLink(false)}
         categories={categories}
-      />
-      <DeleteLinkModal
-        open={showDeleteLink}
-        onClose={() => {
-          setShowDeleteLink(false)
-          setLinkToDelete(null)
-        }}
-        link={linkToDelete}
       />
     </>
   )

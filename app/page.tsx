@@ -4,14 +4,16 @@ import remarkHtml from 'remark-html'
 import remarkSlug from 'remark-slug'
 import { Octokit } from '@octokit/rest'
 import { CommandPalette } from './command-palette'
+import { NewLinkIndicator } from './new-link-indicator'
+import { NewLinkNotification } from './new-link-notification'
+import { SelectableContent } from './selectable-content'
+import { DeleteActionBar } from './delete-action-bar'
 
 // Force dynamic rendering - don't cache this page
 export const dynamic = 'force-dynamic'
 export const revalidate = 0
 
-const SHOW_DEBUG =
-  process.env.NODE_ENV !== 'production' ||
-  process.env.LINKY_SHOW_DEBUG === '1'
+const SHOW_DEBUG = process.env.LINKY_SHOW_DEBUG === '1'
 
 interface Category {
   id: string
@@ -148,6 +150,10 @@ async function getLinks() {
       }
     }
     
+    // Filter out empty categories (categories with no links)
+    const categoriesWithLinks = new Set(links.map(link => link.category).filter(Boolean))
+    categories = categories.filter(cat => categoriesWithLinks.has(cat.title))
+    
     // Second pass: process markdown with slug plugin
     const processedContent = await remark()
       // @ts-ignore - remark-slug has type conflicts with remark versions
@@ -156,6 +162,27 @@ async function getLinks() {
       .process(fileContents)
     
     html = processedContent.toString()
+    
+    // Remove empty category sections from HTML
+    const emptyCategories = Array.from(
+      new Set(
+        fileContents
+          .split('\n')
+          .filter(line => line.startsWith('## '))
+          .map(line => line.replace(/^##\s+/, '').trim())
+      )
+    ).filter(cat => !categoriesWithLinks.has(cat))
+    
+    // Remove empty category headings and their following empty content from HTML
+    for (const emptyCat of emptyCategories) {
+      const catId = emptyCat
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/^-|-$/g, '')
+      // Remove the h2 heading for empty categories
+      const headingRegex = new RegExp(`<h2[^>]*id="${catId}"[^>]*>[^<]*</h2>\\s*`, 'gi')
+      html = html.replace(headingRegex, '')
+    }
   } catch (parseError: any) {
     // If markdown parsing fails, still return valid structure
     console.error('Failed to parse markdown:', parseError)
@@ -200,6 +227,10 @@ export default async function Home() {
   return (
     <>
       <CommandPalette links={links} categories={categories} />
+      <NewLinkNotification />
+      <NewLinkIndicator links={links} />
+      <SelectableContent links={links} />
+      <DeleteActionBar links={links} />
       <div className="page-wrapper">
         <main className="container">
           {/* Only show debug in non-prod, when explicitly enabled, or when there's an error */}

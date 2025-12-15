@@ -13,9 +13,6 @@ No description available
 
 ## Documentation
 
-[Next.js Documentation](https://nextjs.org/docs)
-A comprehensive guide to Next.js framework
-
 [MDN Web Docs](https://developer.mozilla.org)
 The best resource for web development documentation
 

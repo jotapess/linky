@@ -5,6 +5,9 @@
 [Gitingest](https://gitingest.com/)
 Turn any Git repository into a simple text digest of its codebase, useful for feeding into LLMs
 
+[Random Ass Tools](https://www.randomasstools.com/)
+A collection of useful tools and projects
+
 ## Documentation
 
 [Next.js Documentation](https://nextjs.org/docs)

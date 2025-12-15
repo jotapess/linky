@@ -20,3 +20,8 @@ Generate context with up-to-date documentation for LLMs and AI code editors
 
 [Vercel Platform](https://vercel.com)
 Deploy and host your applications with ease
+
+## Libraries
+
+[Cursor Directory - Cursor Rules &amp; MCP Servers](https://cursor.directory/)
+Enhance your Cursor with custom rules, find MCP servers, and join a community of Cursor enthusiasts.

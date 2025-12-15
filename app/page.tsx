@@ -29,6 +29,17 @@ async function getLinks() {
   
   let fileContents = '# Useful Links\n\n'
   let errorMessage = ''
+  let debugInfo: any = {
+    repoOwner,
+    repoName,
+    hasToken: !!process.env.GITHUB_TOKEN,
+    envVars: {
+      GITHUB_REPO_OWNER: process.env.GITHUB_REPO_OWNER,
+      VERCEL_GIT_REPO_OWNER: process.env.VERCEL_GIT_REPO_OWNER,
+      GITHUB_REPO_NAME: process.env.GITHUB_REPO_NAME,
+      VERCEL_GIT_REPO_SLUG: process.env.VERCEL_GIT_REPO_SLUG,
+    }
+  }
   
   try {
     // Try to read from GitHub (works for public repos without token)
@@ -36,27 +47,33 @@ async function getLinks() {
       auth: process.env.GITHUB_TOKEN || undefined // Optional - works without for public repos
     })
     
+    debugInfo.githubCallStarted = true
+    
     const response = await octokit.repos.getContent({
       owner: repoOwner,
       repo: repoName,
       path: 'links.md',
     })
     
+    debugInfo.githubResponseReceived = true
+    debugInfo.responseDataType = response.data && typeof response.data === 'object' ? 'object' : typeof response.data
+    debugInfo.hasContent = 'content' in response.data
+    
     if ('content' in response.data) {
       fileContents = Buffer.from(response.data.content, 'base64').toString('utf-8')
+      debugInfo.contentLength = fileContents.length
+      debugInfo.contentPreview = fileContents.substring(0, 100)
     } else {
       errorMessage = 'GitHub response does not contain content'
+      debugInfo.error = errorMessage
     }
   } catch (error: any) {
     // If GitHub read fails, use default empty content
     errorMessage = error.message || String(error)
-    console.error('Failed to read links.md from GitHub:', {
-      error: errorMessage,
-      status: error.status,
-      repoOwner,
-      repoName,
-      hasToken: !!process.env.GITHUB_TOKEN
-    })
+    debugInfo.error = errorMessage
+    debugInfo.errorStatus = error.status
+    debugInfo.errorStack = error.stack
+    console.error('Failed to read links.md from GitHub:', debugInfo)
     fileContents = '# Useful Links\n\n'
   }
   
@@ -123,29 +140,50 @@ async function getLinks() {
     categories,
     links,
     error: errorMessage || undefined,
+    debug: debugInfo,
   }
 }
 
 export default async function Home() {
   try {
-    const { html: htmlContent, categories, links, error } = await getLinks()
+    const { html: htmlContent, categories, links, error, debug } = await getLinks()
 
     return (
       <>
         <CommandPalette links={links} categories={categories} />
         <div className="page-wrapper">
           <main className="container">
-            {error && (
+            {(error || process.env.NODE_ENV === 'development') && (
               <div style={{ 
-                background: '#fff3cd', 
-                border: '1px solid #ffc107', 
+                background: error ? '#fff3cd' : '#d1ecf1', 
+                border: `1px solid ${error ? '#ffc107' : '#bee5eb'}`, 
                 padding: '1rem', 
                 borderRadius: '4px',
-                marginBottom: '2rem'
+                marginBottom: '2rem',
+                fontSize: '0.9rem'
               }}>
-                <strong>Warning:</strong> Failed to load from GitHub: {error}
-                <br />
-                <small>Showing default content. Check Vercel environment variables.</small>
+                {error ? (
+                  <>
+                    <strong>Warning:</strong> Failed to load from GitHub: {error}
+                    <br />
+                    <small>Showing default content. Check Vercel environment variables.</small>
+                  </>
+                ) : (
+                  <>
+                    <strong>Debug Info:</strong>
+                    <pre style={{ 
+                      background: 'rgba(0,0,0,0.05)', 
+                      padding: '0.5rem', 
+                      borderRadius: '4px',
+                      marginTop: '0.5rem',
+                      fontSize: '0.8rem',
+                      overflow: 'auto',
+                      maxHeight: '200px'
+                    }}>
+                      {JSON.stringify(debug, null, 2)}
+                    </pre>
+                  </>
+                )}
               </div>
             )}
             <div 
@@ -180,6 +218,7 @@ export default async function Home() {
             <p>Failed to load links. Please check the console for details.</p>
             <pre style={{ background: '#f5f5f5', padding: '1rem', borderRadius: '4px', overflow: 'auto' }}>
               {error.message || String(error)}
+              {error.stack && `\n\n${error.stack}`}
             </pre>
           </div>
         </main>

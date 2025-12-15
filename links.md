@@ -24,9 +24,6 @@ Generate context with up-to-date documentation for LLMs and AI code editors
 
 ## Hosting & Deployment
 
-[Vercel Platform](https://vercel.com)
-Deploy and host your applications with ease
-
 ## Libraries
 
 [Cursor Directory - Cursor Rules &amp; MCP Servers](https://cursor.directory/)

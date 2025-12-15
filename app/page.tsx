@@ -149,6 +149,8 @@ async function getLinks() {
 }
 
 export default async function Home() {
+  const renderTime = new Date().toISOString()
+  
   try {
     const { html: htmlContent, categories, links, error, debug } = await getLinks()
 
@@ -157,41 +159,54 @@ export default async function Home() {
         <CommandPalette links={links} categories={categories} />
         <div className="page-wrapper">
           <main className="container">
-            {/* Always show debug info */}
+            {/* Always show debug info with timestamp */}
             <div style={{ 
               background: error ? '#fff3cd' : '#d1ecf1', 
-              border: `1px solid ${error ? '#ffc107' : '#bee5eb'}`, 
+              border: `2px solid ${error ? '#ffc107' : '#17a2b8'}`, 
               padding: '1rem', 
               borderRadius: '4px',
               marginBottom: '2rem',
               fontSize: '0.9rem',
-              color: '#000'
+              color: '#000',
+              boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
             }}>
-              <div style={{ fontWeight: 'bold', marginBottom: '0.5rem' }}>
-                {error ? '⚠️ Error Loading from GitHub' : '🔍 Debug Info'}
+              <div style={{ fontWeight: 'bold', marginBottom: '0.5rem', fontSize: '1rem' }}>
+                {error ? '⚠️ Error Loading from GitHub' : '✅ Debug Info'}
+                <span style={{ marginLeft: '1rem', fontSize: '0.8rem', fontWeight: 'normal', color: '#666' }}>
+                  Rendered: {renderTime}
+                </span>
               </div>
               {error ? (
-                <div>
+                <div style={{ marginBottom: '0.5rem' }}>
                   <div><strong>Error:</strong> {error}</div>
                   <div style={{ marginTop: '0.5rem', fontSize: '0.85rem' }}>
                     Showing default content. Check Vercel environment variables.
                   </div>
                 </div>
-              ) : null}
-              <details style={{ marginTop: '0.5rem' }}>
-                <summary style={{ cursor: 'pointer', fontWeight: 'bold' }}>View Debug Details</summary>
+              ) : (
+                <div style={{ marginBottom: '0.5rem' }}>
+                  <div>✅ Successfully loaded {categories.length} categories and {links.length} links</div>
+                  <div style={{ fontSize: '0.85rem', marginTop: '0.25rem' }}>
+                    Content length: {debug.contentLength || 0} chars
+                  </div>
+                </div>
+              )}
+              <details open style={{ marginTop: '0.5rem' }}>
+                <summary style={{ cursor: 'pointer', fontWeight: 'bold', marginBottom: '0.5rem' }}>
+                  View Debug Details
+                </summary>
                 <pre style={{ 
                   background: 'rgba(0,0,0,0.05)', 
-                  padding: '0.5rem', 
+                  padding: '0.75rem', 
                   borderRadius: '4px',
-                  marginTop: '0.5rem',
                   fontSize: '0.75rem',
                   overflow: 'auto',
-                  maxHeight: '300px',
+                  maxHeight: '400px',
                   whiteSpace: 'pre-wrap',
-                  wordBreak: 'break-word'
+                  wordBreak: 'break-word',
+                  border: '1px solid rgba(0,0,0,0.1)'
                 }}>
-                  {JSON.stringify(debug, null, 2)}
+                  {JSON.stringify({ ...debug, renderTime }, null, 2)}
                 </pre>
               </details>
             </div>
@@ -206,10 +221,16 @@ export default async function Home() {
                 color: '#666',
                 border: '2px dashed #ddd',
                 borderRadius: '8px',
-                marginTop: '2rem'
+                marginTop: '2rem',
+                background: '#f9f9f9'
               }}>
                 <p style={{ fontSize: '1.2rem', marginBottom: '0.5rem' }}>📝 No links found</p>
                 <p>Content is empty. Check if links.md exists in your GitHub repository.</p>
+                <p style={{ marginTop: '1rem', fontSize: '0.9rem' }}>
+                  <a href="/api/test-github" target="_blank" style={{ color: '#007bff' }}>
+                    Test GitHub API connection
+                  </a>
+                </p>
               </div>
             )}
           </main>
@@ -238,16 +259,25 @@ export default async function Home() {
           <div className="content">
             <h1 style={{ color: '#d32f2f' }}>❌ Error Loading Page</h1>
             <p>Failed to load links. Please check the console for details.</p>
+            <p style={{ marginTop: '1rem', fontSize: '0.9rem', color: '#666' }}>
+              Render time: {renderTime}
+            </p>
             <pre style={{ 
               background: '#f5f5f5', 
               padding: '1rem', 
               borderRadius: '4px', 
               overflow: 'auto',
-              border: '1px solid #ddd'
+              border: '1px solid #ddd',
+              marginTop: '1rem'
             }}>
               {error.message || String(error)}
               {error.stack && `\n\n${error.stack}`}
             </pre>
+            <p style={{ marginTop: '1rem' }}>
+              <a href="/api/test-github" target="_blank" style={{ color: '#007bff' }}>
+                Test GitHub API connection
+              </a>
+            </p>
           </div>
         </main>
       </div>

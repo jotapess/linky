@@ -153,7 +153,7 @@ export default async function Home() {
         <CommandPalette links={links} categories={categories} />
         <div className="page-wrapper">
           <main className="container">
-            {(error || process.env.NODE_ENV === 'development') && (
+            {(error || true) && (
               <div style={{ 
                 background: error ? '#fff3cd' : '#d1ecf1', 
                 border: `1px solid ${error ? '#ffc107' : '#bee5eb'}`, 

@@ -1,9 +1,8 @@
-import { readFile } from 'fs/promises'
-import { join } from 'path'
 import { remark } from 'remark'
 import remarkHtml from 'remark-html'
 // @ts-ignore - remark-slug doesn't have types
 import remarkSlug from 'remark-slug'
+import { Octokit } from '@octokit/rest'
 import { CommandPalette } from './command-palette'
 
 interface Category {
@@ -18,8 +17,38 @@ interface Link {
 }
 
 async function getLinks() {
-  const filePath = join(process.cwd(), 'links.md')
-  const fileContents = await readFile(filePath, 'utf8')
+  // Read from GitHub (source of truth)
+  const repoOwner = process.env.GITHUB_REPO_OWNER || 
+                   process.env.VERCEL_GIT_REPO_OWNER ||
+                   'jotapess'
+  const repoName = process.env.GITHUB_REPO_NAME || 
+                  (process.env.VERCEL_GIT_REPO_SLUG?.includes('/') 
+                    ? process.env.VERCEL_GIT_REPO_SLUG.split('/')[1]
+                    : process.env.VERCEL_GIT_REPO_SLUG) ||
+                  'linky'
+  
+  let fileContents = '# Useful Links\n\n'
+  
+  try {
+    // Try to read from GitHub (works for public repos without token)
+    const octokit = new Octokit({ 
+      auth: process.env.GITHUB_TOKEN // Optional - works without for public repos
+    })
+    
+    const response = await octokit.repos.getContent({
+      owner: repoOwner,
+      repo: repoName,
+      path: 'links.md',
+    })
+    
+    if ('content' in response.data) {
+      fileContents = Buffer.from(response.data.content, 'base64').toString('utf-8')
+    }
+  } catch (error) {
+    // If GitHub read fails, use default empty content
+    console.error('Failed to read links.md from GitHub:', error)
+    fileContents = '# Useful Links\n\n'
+  }
   
   // First pass: extract categories and links
   const categories: Category[] = []

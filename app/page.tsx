@@ -9,6 +9,10 @@ import { CommandPalette } from './command-palette'
 export const dynamic = 'force-dynamic'
 export const revalidate = 0
 
+const SHOW_DEBUG =
+  process.env.NODE_ENV !== 'production' ||
+  process.env.LINKY_SHOW_DEBUG === '1'
+
 interface Category {
   id: string
   title: string
@@ -198,57 +202,64 @@ export default async function Home() {
       <CommandPalette links={links} categories={categories} />
       <div className="page-wrapper">
         <main className="container">
-          {/* Always show debug info with timestamp */}
-          <div style={{ 
-            background: error ? '#fff3cd' : '#d1ecf1', 
-            border: `2px solid ${error ? '#ffc107' : '#17a2b8'}`, 
-            padding: '1rem', 
-            borderRadius: '4px',
-            marginBottom: '2rem',
-            fontSize: '0.9rem',
-            color: '#000',
-            boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
-          }}>
-            <div style={{ fontWeight: 'bold', marginBottom: '0.5rem', fontSize: '1rem' }}>
-              {error ? '⚠️ Error Loading from GitHub' : '✅ Debug Info'}
-              <span style={{ marginLeft: '1rem', fontSize: '0.8rem', fontWeight: 'normal', color: '#666' }}>
-                Rendered: {renderTime}
-              </span>
+          {/* Only show debug in non-prod, when explicitly enabled, or when there's an error */}
+          {(SHOW_DEBUG || !!error) && (
+            <div style={{ 
+              background: error ? '#fff3cd' : '#d1ecf1', 
+              border: `2px solid ${error ? '#ffc107' : '#17a2b8'}`, 
+              padding: '1rem', 
+              borderRadius: '4px',
+              marginBottom: '2rem',
+              fontSize: '0.9rem',
+              color: '#000',
+              boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
+            }}>
+              <div style={{ fontWeight: 'bold', marginBottom: '0.5rem', fontSize: '1rem' }}>
+                {error ? '⚠️ Error Loading from GitHub' : '✅ Debug Info'}
+                <span style={{ marginLeft: '1rem', fontSize: '0.8rem', fontWeight: 'normal', color: '#666' }}>
+                  Rendered: {renderTime}
+                </span>
+              </div>
+              {error ? (
+                <div style={{ marginBottom: '0.5rem' }}>
+                  <div><strong>Error:</strong> {error}</div>
+                  <div style={{ marginTop: '0.5rem', fontSize: '0.85rem' }}>
+                    Showing fallback content. The page is still functional - you can add links via the command palette.
+                  </div>
+                  <div style={{ marginTop: '0.5rem', fontSize: '0.85rem' }}>
+                    <a href="/api/test-github" target="_blank" style={{ color: '#007bff' }}>
+                      Test GitHub API connection
+                    </a>
+                  </div>
+                </div>
+              ) : (
+                <div style={{ marginBottom: '0.5rem' }}>
+                  <div>✅ Successfully loaded {categories.length} categories and {links.length} links</div>
+                  <div style={{ fontSize: '0.85rem', marginTop: '0.25rem' }}>
+                    Content length: {debug?.contentLength || 0} chars
+                  </div>
+                </div>
+              )}
+              <details open style={{ marginTop: '0.5rem' }}>
+                <summary style={{ cursor: 'pointer', fontWeight: 'bold', marginBottom: '0.5rem' }}>
+                  View Debug Details
+                </summary>
+                <pre style={{ 
+                  background: 'rgba(0,0,0,0.05)', 
+                  padding: '0.75rem', 
+                  borderRadius: '4px',
+                  fontSize: '0.75rem',
+                  overflow: 'auto',
+                  maxHeight: '400px',
+                  whiteSpace: 'pre-wrap',
+                  wordBreak: 'break-word',
+                  border: '1px solid rgba(0,0,0,0.1)'
+                }}>
+                  {JSON.stringify({ ...debug, renderTime }, null, 2)}
+                </pre>
+              </details>
             </div>
-            {error ? (
-              <div style={{ marginBottom: '0.5rem' }}>
-                <div><strong>Error:</strong> {error}</div>
-                <div style={{ marginTop: '0.5rem', fontSize: '0.85rem' }}>
-                  Showing fallback content. The page is still functional - you can add links via the command palette.
-                </div>
-              </div>
-            ) : (
-              <div style={{ marginBottom: '0.5rem' }}>
-                <div>✅ Successfully loaded {categories.length} categories and {links.length} links</div>
-                <div style={{ fontSize: '0.85rem', marginTop: '0.25rem' }}>
-                  Content length: {debug?.contentLength || 0} chars
-                </div>
-              </div>
-            )}
-            <details open style={{ marginTop: '0.5rem' }}>
-              <summary style={{ cursor: 'pointer', fontWeight: 'bold', marginBottom: '0.5rem' }}>
-                View Debug Details
-              </summary>
-              <pre style={{ 
-                background: 'rgba(0,0,0,0.05)', 
-                padding: '0.75rem', 
-                borderRadius: '4px',
-                fontSize: '0.75rem',
-                overflow: 'auto',
-                maxHeight: '400px',
-                whiteSpace: 'pre-wrap',
-                wordBreak: 'break-word',
-                border: '1px solid rgba(0,0,0,0.1)'
-              }}>
-                {JSON.stringify({ ...debug, renderTime }, null, 2)}
-              </pre>
-            </details>
-          </div>
+          )}
           <div 
             className="content"
             dangerouslySetInnerHTML={{ __html: htmlContent }}

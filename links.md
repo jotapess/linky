@@ -25,3 +25,8 @@ Generate context with up-to-date documentation for LLMs and AI code editors
 
 [Cursor Directory - Cursor Rules &amp; MCP Servers](https://cursor.directory/)
 Enhance your Cursor with custom rules, find MCP servers, and join a community of Cursor enthusiasts.
+
+## Productivity
+
+[Sotto](https://sotto.to/)
+Voice Dictation app for macOS

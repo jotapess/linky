@@ -5,6 +5,10 @@ import remarkSlug from 'remark-slug'
 import { Octokit } from '@octokit/rest'
 import { CommandPalette } from './command-palette'
 
+// Force dynamic rendering - don't cache this page
+export const dynamic = 'force-dynamic'
+export const revalidate = 0
+
 interface Category {
   id: string
   title: string
@@ -153,43 +157,61 @@ export default async function Home() {
         <CommandPalette links={links} categories={categories} />
         <div className="page-wrapper">
           <main className="container">
-            {(error || true) && (
-              <div style={{ 
-                background: error ? '#fff3cd' : '#d1ecf1', 
-                border: `1px solid ${error ? '#ffc107' : '#bee5eb'}`, 
-                padding: '1rem', 
-                borderRadius: '4px',
-                marginBottom: '2rem',
-                fontSize: '0.9rem'
-              }}>
-                {error ? (
-                  <>
-                    <strong>Warning:</strong> Failed to load from GitHub: {error}
-                    <br />
-                    <small>Showing default content. Check Vercel environment variables.</small>
-                  </>
-                ) : (
-                  <>
-                    <strong>Debug Info:</strong>
-                    <pre style={{ 
-                      background: 'rgba(0,0,0,0.05)', 
-                      padding: '0.5rem', 
-                      borderRadius: '4px',
-                      marginTop: '0.5rem',
-                      fontSize: '0.8rem',
-                      overflow: 'auto',
-                      maxHeight: '200px'
-                    }}>
-                      {JSON.stringify(debug, null, 2)}
-                    </pre>
-                  </>
-                )}
+            {/* Always show debug info */}
+            <div style={{ 
+              background: error ? '#fff3cd' : '#d1ecf1', 
+              border: `1px solid ${error ? '#ffc107' : '#bee5eb'}`, 
+              padding: '1rem', 
+              borderRadius: '4px',
+              marginBottom: '2rem',
+              fontSize: '0.9rem',
+              color: '#000'
+            }}>
+              <div style={{ fontWeight: 'bold', marginBottom: '0.5rem' }}>
+                {error ? '⚠️ Error Loading from GitHub' : '🔍 Debug Info'}
               </div>
-            )}
+              {error ? (
+                <div>
+                  <div><strong>Error:</strong> {error}</div>
+                  <div style={{ marginTop: '0.5rem', fontSize: '0.85rem' }}>
+                    Showing default content. Check Vercel environment variables.
+                  </div>
+                </div>
+              ) : null}
+              <details style={{ marginTop: '0.5rem' }}>
+                <summary style={{ cursor: 'pointer', fontWeight: 'bold' }}>View Debug Details</summary>
+                <pre style={{ 
+                  background: 'rgba(0,0,0,0.05)', 
+                  padding: '0.5rem', 
+                  borderRadius: '4px',
+                  marginTop: '0.5rem',
+                  fontSize: '0.75rem',
+                  overflow: 'auto',
+                  maxHeight: '300px',
+                  whiteSpace: 'pre-wrap',
+                  wordBreak: 'break-word'
+                }}>
+                  {JSON.stringify(debug, null, 2)}
+                </pre>
+              </details>
+            </div>
             <div 
               className="content"
               dangerouslySetInnerHTML={{ __html: htmlContent }}
             />
+            {htmlContent.trim() === '<h1>Useful Links</h1>' && (
+              <div style={{ 
+                padding: '2rem', 
+                textAlign: 'center', 
+                color: '#666',
+                border: '2px dashed #ddd',
+                borderRadius: '8px',
+                marginTop: '2rem'
+              }}>
+                <p style={{ fontSize: '1.2rem', marginBottom: '0.5rem' }}>📝 No links found</p>
+                <p>Content is empty. Check if links.md exists in your GitHub repository.</p>
+              </div>
+            )}
           </main>
           {categories.length > 0 && (
             <nav className="navigation">
@@ -214,9 +236,15 @@ export default async function Home() {
       <div className="page-wrapper">
         <main className="container">
           <div className="content">
-            <h1>Error Loading Page</h1>
+            <h1 style={{ color: '#d32f2f' }}>❌ Error Loading Page</h1>
             <p>Failed to load links. Please check the console for details.</p>
-            <pre style={{ background: '#f5f5f5', padding: '1rem', borderRadius: '4px', overflow: 'auto' }}>
+            <pre style={{ 
+              background: '#f5f5f5', 
+              padding: '1rem', 
+              borderRadius: '4px', 
+              overflow: 'auto',
+              border: '1px solid #ddd'
+            }}>
               {error.message || String(error)}
               {error.stack && `\n\n${error.stack}`}
             </pre>

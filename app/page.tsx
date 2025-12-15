@@ -47,9 +47,9 @@ async function getLinks() {
       
       if (node.type === 'paragraph' && node.children) {
         // Check if this paragraph contains a link
-        const linkNode = node.children.find((child: any) => child.type === 'link')
+        const linkNode = node.children.find((child: any) => child.type === 'link') as any
         
-        if (linkNode) {
+        if (linkNode && linkNode.children) {
           const text = linkNode.children
             .map((c: any) => (c.type === 'text' ? c.value : ''))
             .join('')
@@ -74,6 +74,7 @@ async function getLinks() {
   
   // Second pass: process markdown with slug plugin
   const processedContent = await remark()
+    // @ts-ignore - remark-slug has type conflicts with remark versions
     .use(remarkSlug)
     .use(remarkHtml)
     .process(fileContents)

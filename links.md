@@ -8,6 +8,9 @@ Turn any Git repository into a simple text digest of its codebase, useful for fe
 [Random Ass Tools](https://www.randomasstools.com/)
 A collection of useful tools and projects
 
+[OpenCode | The open source AI coding agent](https://opencode.ai/)
+No description available
+
 ## Documentation
 
 [Next.js Documentation](https://nextjs.org/docs)

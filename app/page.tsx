@@ -28,11 +28,12 @@ async function getLinks() {
                   'linky'
   
   let fileContents = '# Useful Links\n\n'
+  let errorMessage = ''
   
   try {
     // Try to read from GitHub (works for public repos without token)
     const octokit = new Octokit({ 
-      auth: process.env.GITHUB_TOKEN // Optional - works without for public repos
+      auth: process.env.GITHUB_TOKEN || undefined // Optional - works without for public repos
     })
     
     const response = await octokit.repos.getContent({
@@ -43,10 +44,19 @@ async function getLinks() {
     
     if ('content' in response.data) {
       fileContents = Buffer.from(response.data.content, 'base64').toString('utf-8')
+    } else {
+      errorMessage = 'GitHub response does not contain content'
     }
-  } catch (error) {
+  } catch (error: any) {
     // If GitHub read fails, use default empty content
-    console.error('Failed to read links.md from GitHub:', error)
+    errorMessage = error.message || String(error)
+    console.error('Failed to read links.md from GitHub:', {
+      error: errorMessage,
+      status: error.status,
+      repoOwner,
+      repoName,
+      hasToken: !!process.env.GITHUB_TOKEN
+    })
     fileContents = '# Useful Links\n\n'
   }
   
@@ -112,38 +122,69 @@ async function getLinks() {
     html: processedContent.toString(),
     categories,
     links,
+    error: errorMessage || undefined,
   }
 }
 
 export default async function Home() {
-  const { html: htmlContent, categories, links } = await getLinks()
+  try {
+    const { html: htmlContent, categories, links, error } = await getLinks()
 
-  return (
-    <>
-      <CommandPalette links={links} categories={categories} />
+    return (
+      <>
+        <CommandPalette links={links} categories={categories} />
+        <div className="page-wrapper">
+          <main className="container">
+            {error && (
+              <div style={{ 
+                background: '#fff3cd', 
+                border: '1px solid #ffc107', 
+                padding: '1rem', 
+                borderRadius: '4px',
+                marginBottom: '2rem'
+              }}>
+                <strong>Warning:</strong> Failed to load from GitHub: {error}
+                <br />
+                <small>Showing default content. Check Vercel environment variables.</small>
+              </div>
+            )}
+            <div 
+              className="content"
+              dangerouslySetInnerHTML={{ __html: htmlContent }}
+            />
+          </main>
+          {categories.length > 0 && (
+            <nav className="navigation">
+              <div className="nav-title">On this page</div>
+              <ul className="nav-list">
+                {categories.map((category) => (
+                  <li key={category.id}>
+                    <a href={`#${category.id}`} className="nav-link">
+                      {category.title}
+                    </a>
+                  </li>
+                ))}
+              </ul>
+            </nav>
+          )}
+        </div>
+      </>
+    )
+  } catch (error: any) {
+    console.error('Error rendering page:', error)
+    return (
       <div className="page-wrapper">
         <main className="container">
-          <div 
-            className="content"
-            dangerouslySetInnerHTML={{ __html: htmlContent }}
-          />
+          <div className="content">
+            <h1>Error Loading Page</h1>
+            <p>Failed to load links. Please check the console for details.</p>
+            <pre style={{ background: '#f5f5f5', padding: '1rem', borderRadius: '4px', overflow: 'auto' }}>
+              {error.message || String(error)}
+            </pre>
+          </div>
         </main>
-        {categories.length > 0 && (
-          <nav className="navigation">
-            <div className="nav-title">On this page</div>
-            <ul className="nav-list">
-              {categories.map((category) => (
-                <li key={category.id}>
-                  <a href={`#${category.id}`} className="nav-link">
-                    {category.title}
-                  </a>
-                </li>
-              ))}
-            </ul>
-          </nav>
-        )}
       </div>
-    </>
-  )
+    )
+  }
 }
 

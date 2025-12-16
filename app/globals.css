@@ -206,6 +206,20 @@ body {
   backdrop-filter: blur(4px);
 }
 
+.mobile-add-link-button {
+  display: none;
+}
+
+.mobile-add-link-button-icon {
+  font-size: 1.25rem;
+  line-height: 1;
+}
+
+.mobile-add-link-button-text {
+  font-size: 0.95rem;
+  font-weight: 600;
+}
+
 .command-palette {
   position: fixed;
   top: 50%;
@@ -643,6 +657,34 @@ body {
     padding: 2rem 1rem;
   }
 
+  .mobile-add-link-button {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    position: fixed;
+    right: 1rem;
+    bottom: calc(1rem + env(safe-area-inset-bottom, 0px));
+    z-index: 8500;
+    padding: 0.75rem 1rem;
+    border: 1px solid rgba(0, 0, 0, 0.08);
+    border-radius: 999px;
+    background: #0066cc;
+    color: #ffffff;
+    box-shadow: 0 10px 20px rgba(0, 0, 0, 0.18);
+    cursor: pointer;
+    font-family: 'Inter', sans-serif;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .mobile-add-link-button:active {
+    transform: translateY(1px);
+  }
+
+  .dark .mobile-add-link-button {
+    border-color: rgba(255, 255, 255, 0.12);
+    box-shadow: 0 10px 20px rgba(0, 0, 0, 0.45);
+  }
+
   .navigation {
     position: relative;
     top: 0;
@@ -834,4 +876,9 @@ body {
 /* Add padding to page when delete bar is visible */
 body:has(.delete-action-bar) .page-wrapper {
   padding-bottom: 6rem;
+}
+
+/* Keep the mobile add button above the delete bar */
+body:has(.delete-action-bar) .mobile-add-link-button {
+  bottom: calc(6.25rem + env(safe-area-inset-bottom, 0px));
 }

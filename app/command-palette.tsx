@@ -45,6 +45,22 @@ export function CommandPalette({ links, categories }: CommandPaletteProps) {
 
   return (
     <>
+      {!open && !showAddLink && !isDeleteMode && (
+        <button
+          type="button"
+          className="mobile-add-link-button"
+          onClick={() => {
+            setOpen(false)
+            setShowAddLink(true)
+          }}
+          aria-label="Add new link"
+        >
+          <span className="mobile-add-link-button-icon" aria-hidden="true">
+            +
+          </span>
+          <span className="mobile-add-link-button-text">Add link</span>
+        </button>
+      )}
       {open && (
         <div className="command-palette-overlay" onClick={() => setOpen(false)} />
       )}
